@@ -63,15 +63,7 @@
             const progressContainer = document.getElementById('progressContainer');
             
             const chunks = [];
-            let loadedSize = 0;
-            let totalSize = 0;
             const totalChunks = 6;
-
-            // 先获取所有文件的大小
-            for (let i = 1; i <= totalChunks; i++) {
-                const response = await fetch(`video/${i.toString().padStart(2, '0')}.bin`, { method: 'HEAD' });
-                totalSize += parseInt(response.headers.get('content-length') || 0);
-            }
 
             // 加载所有分片
             for (let i = 1; i <= totalChunks; i++) {
@@ -79,8 +71,7 @@
                 const blob = await response.blob();
                 chunks.push(blob);
                 
-                loadedSize += blob.size;
-                const progress = (loadedSize / totalSize) * 100;
+                const progress = (i / totalChunks) * 100;
                 progressBar.style.width = `${progress}%`;
                 progressText.textContent = `加载中... ${Math.round(progress)}%`;
             }
