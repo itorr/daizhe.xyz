@@ -43,6 +43,11 @@
 
     <script>
     (async ()=> {
+        // 获取音频文件并创建 blob URL
+        const response = await fetch('daizhe48.m4a');
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        
         let audioContext;
         let analyser;
         let source;
@@ -52,10 +57,10 @@
         const ctx = canvas.getContext('2d');
         const playButton = document.getElementById('playButton');
         const audio = document.getElementById('audio');
-
-        // audio 循环播放
-        audio.loop = true;
         
+        // 设置 audio 的 src 为 blob URL
+        audio.src = audioUrl;
+        audio.loop = true;
 
         // 设置canvas尺寸
         canvas.width = 128;
