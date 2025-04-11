@@ -51,12 +51,8 @@
         const playButton = document.getElementById('playButton');
 
         // 设置canvas尺寸
-        function resizeCanvas() {
-            canvas.width = 128;
-            canvas.height = 64;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        canvas.width = 128;
+        canvas.height = 64;
 
         async function initAudio() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
