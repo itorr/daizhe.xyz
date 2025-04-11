@@ -39,7 +39,6 @@
 <body>
     <canvas id="canvas"></canvas>
     <button id="playButton">▶</button>
-    <audio id="audio" src="daizhe48.m4a" style="display: none;"></audio>
 
     <script>
     (async ()=> {
@@ -56,7 +55,7 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const playButton = document.getElementById('playButton');
-        const audio = document.getElementById('audio');
+        const audio = new Audio();
         
         // 设置 audio 的 src 为 blob URL
         audio.src = audioUrl;
