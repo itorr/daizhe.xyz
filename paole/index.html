@@ -12,87 +12,121 @@
             height: 100%;
             overflow: hidden;
             background: #000;
+            cursor: pointer;
         }
-        video {
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            image-rendering: pixelated;
         }
-        .progress-container {
+        #playButton {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 80%;
-            max-width: 300px;
-            text-align: center;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background: #333;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .progress {
-            width: 0%;
-            height: 100%;
-            background: #4CAF50;
-            transition: width 0.3s;
-        }
-        .progress-text {
+            background: none;
+            border: none;
             color: white;
-            margin-top: 10px;
+            font-size: 84px;
+            cursor: pointer;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
-    <div class="progress-container" id="progressContainer">
-        <div class="progress-bar">
-            <div class="progress" id="progressBar"></div>
-        </div>
-        <div class="progress-text" id="progressText">加载中... 0%</div>
-    </div>
-    <video id="myVideo" style="display:none" autoplay loop muted playsinline></video>
+    <canvas id="canvas"></canvas>
+    <button id="playButton">▶</button>
 
     <script>
-        async function loadVideo() {
-            const video = document.getElementById('myVideo');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            const progressContainer = document.getElementById('progressContainer');
+        let audioContext;
+        let analyser;
+        let source;
+        let isPlaying = false;
+        let animationId;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const playButton = document.getElementById('playButton');
+
+        // 设置canvas尺寸
+        function resizeCanvas() {
+            canvas.width = 128;
+            canvas.height = 64;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        async function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 64; // 低分辨率
             
-            const chunks = [];
-            const totalChunks = 6;
+            const response = await fetch('daizhe.m4a');
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
+            return source;
+        }
+        const bufferLength = 16;
+        const dataArray = new Uint8Array(bufferLength);
 
-            // 加载所有分片
-            for (let i = 1; i <= totalChunks; i++) {
-                const response = await fetch(`video/${i.toString().padStart(2, '0')}.bin`);
-                const blob = await response.blob();
-                chunks.push(blob);
-                
-                const progress = (i / totalChunks) * 100;
-                progressBar.style.width = `${progress}%`;
-                progressText.textContent = `加载中... ${Math.round(progress)}%`;
+
+        function drawSpectrum() {
+            analyser.getByteFrequencyData(dataArray);
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = canvas.width / bufferLength;
+            const heightScale = canvas.height / 256;
+
+            ctx.fillStyle = '#4CAF50';
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = dataArray[i] * heightScale;
+                const x = i * barWidth;
+                const y = canvas.height - barHeight;
+                ctx.fillRect(x, y, barWidth - 1, barHeight);
             }
 
-            // 合并所有分片
-            const videoBlob = new Blob(chunks, { type: 'video/mp4' });
-            video.src = URL.createObjectURL(videoBlob);
-            video.style.display = 'block';
-            progressContainer.style.display = 'none';
-
-            // 点击切换声音
-            function toggleSound() {
-                video.muted = false; // 取消静音
-                video.play(); // 播放视频
+            if (isPlaying) {
+                animationId = requestAnimationFrame(drawSpectrum);
             }
-
-            video.addEventListener('click', toggleSound);
-            video.addEventListener('touchstart', toggleSound);
         }
 
-        loadVideo();
+        async function togglePlay() {
+            if (!audioContext) {
+                source = await initAudio();
+            }
+
+            if (!isPlaying) {
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                source.start(0);
+                playButton.textContent = '⏸';
+                isPlaying = true;
+                drawSpectrum();
+            } else {
+                audioContext.close();
+                audioContext = null;
+                playButton.textContent = '▶';
+                isPlaying = false;
+                cancelAnimationFrame(animationId);
+            }
+        }
+
+        document.body.addEventListener('click', togglePlay);
+        playButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePlay();
+        });
     </script>
 </body>
 </html>
