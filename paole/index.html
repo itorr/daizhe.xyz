@@ -84,7 +84,8 @@
 
             // 点击切换声音
             function toggleSound() {
-                video.muted = !video.muted;
+                video.muted = false; // 取消静音
+                video.play(); // 播放视频
             }
 
             video.addEventListener('click', toggleSound);
