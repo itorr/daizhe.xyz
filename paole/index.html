@@ -39,8 +39,10 @@
 <body>
     <canvas id="canvas"></canvas>
     <button id="playButton">▶</button>
+    <audio id="audio" src="daizhe48.m4a" style="display: none;"></audio>
 
     <script>
+    (async ()=> {
         let audioContext;
         let analyser;
         let source;
@@ -49,27 +51,49 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const playButton = document.getElementById('playButton');
+        const audio = document.getElementById('audio');
+
+        // audio 循环播放
+        audio.loop = true;
+        
 
         // 设置canvas尺寸
         canvas.width = 128;
         canvas.height = 64;
 
-        async function initAudio() {
+        function getSource() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioContext.createAnalyser();
-            analyser.fftSize = 64; // 低分辨率
+            analyser.fftSize = 64;
             
-            const response = await fetch('daizhe.m4a');
-            const arrayBuffer = await response.arrayBuffer();
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            
-            source = audioContext.createBufferSource();
-            source.buffer = audioBuffer;
+            source = audioContext.createMediaElementSource(audio);
             source.connect(analyser);
             analyser.connect(audioContext.destination);
             
             return source;
         }
+
+        async function togglePlay() {
+            if (!source) {
+                source = getSource();
+            }
+
+            if (!isPlaying) {
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                audio.play();
+                playButton.textContent = '⏸';
+                isPlaying = true;
+                drawSpectrum();
+            } else {
+                audio.pause();
+                playButton.textContent = '▶';
+                isPlaying = false;
+                cancelAnimationFrame(animationId);
+            }
+        }
+
         const bufferLength = 16;
         const dataArray = new Uint8Array(bufferLength);
 
@@ -96,33 +120,13 @@
             }
         }
 
-        async function togglePlay() {
-            if (!audioContext) {
-                source = await initAudio();
-            }
-
-            if (!isPlaying) {
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
-                }
-                source.start(0);
-                playButton.textContent = '⏸';
-                isPlaying = true;
-                drawSpectrum();
-            } else {
-                audioContext.close();
-                audioContext = null;
-                playButton.textContent = '▶';
-                isPlaying = false;
-                cancelAnimationFrame(animationId);
-            }
-        }
-
         document.body.addEventListener('click', togglePlay);
         playButton.addEventListener('click', (e) => {
             e.stopPropagation();
             togglePlay();
         });
+
+    })();
     </script>
 </body>
 </html>
